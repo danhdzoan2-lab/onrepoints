@@ -117,12 +117,12 @@ export function parseOnreHtml(html) {
   const pointsSeries = seriesArrays.find((items) => items[0]?.totalPointsIssued) ?? [];
   const latestTvl = tvl.at(-1) ?? {};
   const latestYield = yieldSeries.at(-1) ?? {};
+  const totalPoints = wallets.reduce((sum, wallet) => sum + wallet.totalPoints, 0);
   const currentPointsRow = pointsSeries.at(-1) ?? {};
   const recentPointRows = pointsSeries.slice(-7);
   const dailyPointsAvg7d =
     recentPointRows.reduce((sum, row) => sum + Number(row.dailyTotalGrowth || 0), 0) /
     Math.max(1, recentPointRows.length);
-  const totalPoints = wallets.reduce((sum, wallet) => sum + wallet.totalPoints, 0);
 
   return {
     fetchedAt: new Date().toISOString(),
@@ -140,7 +140,7 @@ export function parseOnreHtml(html) {
       dailyPointsAvg7dLabel: compactNumber(dailyPointsAvg7d),
       wallets: wallets.length,
       latestPointsDate: currentPointsRow.date,
-      updatedAtUtcPlusOne: "Daily UTC+1"
+      dailyUpdateTimeGmt: "01:00 GMT"
     },
     tvl,
     distribution,
