@@ -3,7 +3,8 @@ import { fallbackData } from "./data/fallback";
 
 const SOURCE_URL = "https://onre.hanyon.app/";
 const SNAPSHOT_KEY = "onre-source-wallet-snapshot-v3";
-const UTC_PLUS_ONE_OFFSET_MS = 60 * 60 * 1000;
+const DAILY_UPDATE_HOUR_UTC = 1;
+const DAILY_UPDATE_OFFSET_MS = DAILY_UPDATE_HOUR_UTC * 60 * 60 * 1000;
 
 const POINT_COLUMNS = [
   { key: "wallet", label: "Wallet" },
@@ -33,8 +34,8 @@ function shortAddress(address) {
   return `${address.slice(0, 6)}...${address.slice(-6)}`;
 }
 
-function getUtcPlusOneKey(now = new Date()) {
-  const shifted = new Date(now.getTime() + UTC_PLUS_ONE_OFFSET_MS);
+function getPointUpdateKey(now = new Date()) {
+  const shifted = new Date(now.getTime() - DAILY_UPDATE_OFFSET_MS);
   return [
     shifted.getUTCFullYear(),
     String(shifted.getUTCMonth() + 1).padStart(2, "0"),
@@ -42,18 +43,23 @@ function getUtcPlusOneKey(now = new Date()) {
   ].join("-");
 }
 
-function getNextUtcPlusOneUpdate(now = new Date()) {
-  const shifted = new Date(now.getTime() + UTC_PLUS_ONE_OFFSET_MS);
-  return new Date(
+function getNextPointUpdate(now = new Date()) {
+  const next = new Date(
     Date.UTC(
-      shifted.getUTCFullYear(),
-      shifted.getUTCMonth(),
-      shifted.getUTCDate() + 1,
-      0,
+      now.getUTCFullYear(),
+      now.getUTCMonth(),
+      now.getUTCDate(),
+      DAILY_UPDATE_HOUR_UTC,
       0,
       0
-    ) - UTC_PLUS_ONE_OFFSET_MS
+    )
   );
+
+  if (next <= now) {
+    next.setUTCDate(next.getUTCDate() + 1);
+  }
+
+  return next;
 }
 
 function formatCountdown(target, now = new Date()) {
@@ -99,7 +105,7 @@ function useWalletMovement(wallets) {
   useEffect(() => {
     if (!wallets.length) return;
 
-    const dayKey = getUtcPlusOneKey();
+    const dayKey = getPointUpdateKey();
     const current = Object.fromEntries(
       wallets.slice(0, 500).map((wallet) => [wallet.address, wallet.totalPoints])
     );
@@ -176,7 +182,7 @@ function PointAnalysis({ data, status, movement }) {
     return () => window.clearInterval(timer);
   }, []);
 
-  const nextUpdate = getNextUtcPlusOneUpdate(now);
+  const nextUpdate = getNextPointUpdate(now);
   const sourceTotals = useMemo(() => {
     return POINT_COLUMNS.map((column) => ({
       ...column,
@@ -211,14 +217,14 @@ function PointAnalysis({ data, status, movement }) {
     <main className="analysis-page">
       <div className="source-status">
         <span className="pulse" />
-        {status} · extracted from {data.sourceUrl}
+        {status} - extracted from {data.sourceUrl}
       </div>
 
       <section className="metric-grid">
         <MetricCard label="Total points" value={data.meta.totalPointsLabel} detail={`${data.meta.wallets.toLocaleString()} wallets`} />
         <MetricCard label="Daily points pace" value={`+${data.meta.dailyPointsAvg7dLabel}`} detail="average daily issuance, last 7 days" tone="positive" />
-        <MetricCard label="UTC+1 update" value={formatCountdown(nextUpdate, now)} detail={nextUpdate.toUTCString()} tone="accent" />
-        <MetricCard label="Current APY" value={formatPct(data.meta.currentApy)} detail={`${formatPct(data.meta.realizedApy30d)} realized · 30d`} tone="accent" />
+        <MetricCard label="01:00 GMT update" value={formatCountdown(nextUpdate, now)} detail={nextUpdate.toUTCString()} tone="accent" />
+        <MetricCard label="Current APY" value={formatPct(data.meta.currentApy)} detail={`${formatPct(data.meta.realizedApy30d)} realized - 30d`} tone="accent" />
       </section>
 
       <Section title="Point source mix" description="Point contribution by source column from the live wallet directory.">
@@ -263,7 +269,7 @@ function PointAnalysis({ data, status, movement }) {
 
       <Section
         title="Wallet point movement"
-        description="Movement compares the latest source load to this browser's prior UTC+1 snapshot when available; otherwise it allocates the source 7-day daily average by wallet share."
+        description="Movement compares the latest source load to this browser's prior 01:00 GMT snapshot when available; otherwise it allocates the source 7-day daily average by wallet share."
       >
         <div className="card table-card">
           <div className="table-scroll">
