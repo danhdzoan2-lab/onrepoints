@@ -7,7 +7,7 @@ Dashboard wrapper for `https://onre.hanyon.app/` with an added point analysis vi
 - Source dashboard tab renders the live OnRe Analytics dashboard so the dashboard stays visually aligned with the source.
 - Point analysis tab reads the same source data through `/api/source`.
 - Source parser extracts TVL, yield, point issuance, holder tiers, and the wallet directory from the source page.
-- Wallet movement compares against this browser's prior UTC+1 snapshot when available.
+- Wallet movement compares against this browser's prior 01:00 GMT snapshot when available.
 - When no prior snapshot exists, movement is estimated from the source 7-day average daily point issuance.
 
 ## Local Run
