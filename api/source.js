@@ -109,11 +109,7 @@ export function parseOnreHtml(html) {
   }
 
   const buckets = extractArrayAfter(decoded, '"buckets":[')?.array ?? [];
-  const wallets = [
-    ...decoded.matchAll(
-      /\{"rank":\d+,"address":"[^"]+","totalPoints":\d+,"wallet":\d+,"kamino":\d+,"loopscale":\d+,"exponentYt":\d+,"exponentLp":\d+,"orca":\d+,"elemental":\d+,"carrot":\d+,"referralBonus":\d+\}/g
-    )
-  ].map((match) => JSON.parse(match[0]));
+  const wallets = extractArrayAfter(decoded, '"wallets":[')?.array ?? [];
 
   const tvl = dataArrays.find((items) => items[0]?.date && "wallet" in items[0]) ?? [];
   const distribution = dataArrays.find((items) => items[0]?.protocol) ?? [];
@@ -121,9 +117,8 @@ export function parseOnreHtml(html) {
   const pointsSeries = seriesArrays.find((items) => items[0]?.totalPointsIssued) ?? [];
   const latestTvl = tvl.at(-1) ?? {};
   const latestYield = yieldSeries.at(-1) ?? {};
-  const currentPointsRow = pointsSeries.find((row) => Math.abs(row.totalPointsIssued - wallets.reduce((sum, wallet) => sum + wallet.totalPoints, 0)) < 1000) ?? pointsSeries.at(-8) ?? pointsSeries.at(-1) ?? {};
-  const currentPointsIndex = Math.max(0, pointsSeries.indexOf(currentPointsRow));
-  const recentPointRows = pointsSeries.slice(Math.max(0, currentPointsIndex - 6), currentPointsIndex + 1);
+  const currentPointsRow = pointsSeries.at(-1) ?? {};
+  const recentPointRows = pointsSeries.slice(-7);
   const dailyPointsAvg7d =
     recentPointRows.reduce((sum, row) => sum + Number(row.dailyTotalGrowth || 0), 0) /
     Math.max(1, recentPointRows.length);
