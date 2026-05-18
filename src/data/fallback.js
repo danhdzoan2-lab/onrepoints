@@ -14,7 +14,7 @@ export const fallbackData = {
     dailyPointsAvg7dLabel: "707.68M",
     wallets: 15009,
     latestPointsDate: "2026-05-18",
-    updatedAtUtcPlusOne: "Daily UTC+1"
+    dailyUpdateTimeGmt: "01:00 GMT"
   },
   distribution: [
     { protocol: "kamino", capitalUsd: 87782176.62, sharePct: 0.506319 },
@@ -25,10 +25,43 @@ export const fallbackData = {
     { protocol: "elemental", capitalUsd: 6637296.93, sharePct: 0.038283 },
     { protocol: "carrot", capitalUsd: 121676.7, sharePct: 0.000702 }
   ],
-  tvl: [],
-  yieldSeries: [],
-  pointsSeries: [],
-  holderBuckets: [],
+  tvl: [
+    { date: "2026-05-12", kamino: 81200000, loopscale: 31200000, wallet: 22900000, exponent: 11600000, orca: 7720000, elemental: 5900000, carrot: 98000 },
+    { date: "2026-05-13", kamino: 82900000, loopscale: 31800000, wallet: 23100000, exponent: 12000000, orca: 7900000, elemental: 6120000, carrot: 104000 },
+    { date: "2026-05-14", kamino: 84100000, loopscale: 32100000, wallet: 23800000, exponent: 12400000, orca: 8080000, elemental: 6250000, carrot: 111000 },
+    { date: "2026-05-15", kamino: 85900000, loopscale: 32600000, wallet: 24200000, exponent: 12700000, orca: 8200000, elemental: 6420000, carrot: 116000 },
+    { date: "2026-05-16", kamino: 86900000, loopscale: 32700000, wallet: 24400000, exponent: 12900000, orca: 8280000, elemental: 6540000, carrot: 119000 },
+    { date: "2026-05-17", kamino: 87500000, loopscale: 32730000, wallet: 24540000, exponent: 13030000, orca: 8330000, elemental: 6610000, carrot: 120000 },
+    { date: "2026-05-18", kamino: 87782176.62, loopscale: 32756995.09, wallet: 24649716.84, exponent: 13060273.06, orca: 8357110.68, elemental: 6637296.93, carrot: 121676.7 }
+  ],
+  yieldSeries: [
+    { date: "2026-05-12", nav: 1.10192, cumulativeReturn: 0.09212, apy7d: 0.1162, apy30d: 0.1101 },
+    { date: "2026-05-13", nav: 1.10234, cumulativeReturn: 0.09254, apy7d: 0.1171, apy30d: 0.1104 },
+    { date: "2026-05-14", nav: 1.10279, cumulativeReturn: 0.09298, apy7d: 0.1188, apy30d: 0.1108 },
+    { date: "2026-05-15", nav: 1.10319, cumulativeReturn: 0.09338, apy7d: 0.1193, apy30d: 0.1111 },
+    { date: "2026-05-16", nav: 1.10361, cumulativeReturn: 0.0938, apy7d: 0.1191, apy30d: 0.1112 },
+    { date: "2026-05-17", nav: 1.10396, cumulativeReturn: 0.09415, apy7d: 0.1193, apy30d: 0.1114 },
+    { date: "2026-05-18", nav: 1.104272, cumulativeReturn: 0.0945, apy7d: 0.1192, apy30d: 0.1116 }
+  ],
+  pointsSeries: [
+    { date: "2026-05-12", totalPointsIssued: 85264330000, dailyTotalGrowth: 633520000 },
+    { date: "2026-05-13", totalPointsIssued: 85927590000, dailyTotalGrowth: 663260000 },
+    { date: "2026-05-14", totalPointsIssued: 86623710000, dailyTotalGrowth: 696120000 },
+    { date: "2026-05-15", totalPointsIssued: 87332660000, dailyTotalGrowth: 708950000 },
+    { date: "2026-05-16", totalPointsIssued: 88052030000, dailyTotalGrowth: 719370000 },
+    { date: "2026-05-17", totalPointsIssued: 88797490000, dailyTotalGrowth: 745460000 },
+    { date: "2026-05-18", totalPointsIssued: 89510734997, dailyTotalGrowth: 713244997 }
+  ],
+  holderBuckets: [
+    { label: "1 - 999", count: 2239, points: 539958 },
+    { label: "1K - 10K", count: 2247, points: 9647397 },
+    { label: "10K - 100K", count: 3389, points: 135734009 },
+    { label: "100K - 1M", count: 3534, points: 1346081276 },
+    { label: "1M - 5M", count: 2037, points: 4765289247 },
+    { label: "5M - 10M", count: 622, points: 4391520700 },
+    { label: "10M - 50M", count: 691, points: 14323447054 },
+    { label: "50M+", count: 250, points: 64538305356 }
+  ],
   topBreakdown: [
     { tier: "Top 1%", color: "var(--accent)", thresholdLabel: "83.81M", wallets: 150, walletPct: 0.01, pointsLabel: "56.79B", pointsPct: 0.6345 },
     { tier: "Top 5%", color: "#FFD96B", thresholdLabel: "13.87M", wallets: 600, walletPct: 0.04, pointsLabel: "19.81B", pointsPct: 0.2213 },
