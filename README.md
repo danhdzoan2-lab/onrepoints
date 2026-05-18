@@ -1,14 +1,14 @@
 # Onre Points Dashboard
 
-Wallet points dashboard for tracking Onre points movement by wallet. The app is built with Vite and React and is ready for GitHub plus Vercel deployment.
+Dashboard wrapper for `https://onre.hanyon.app/` with an added point analysis view.
 
 ## Features
 
-- Dashboard overview with total points, daily movement, transaction count, and tracked volume
-- Wallet directory ranked by current Onre points
-- Daily movement, previous day points, rank movement, and 7-day trend per wallet
-- Client-side points rollover based on the UTC+1 day boundary
-- Local browser persistence so daily movement does not reset on refresh
+- Source dashboard tab renders the live OnRe Analytics dashboard so the dashboard stays visually aligned with the source.
+- Point analysis tab reads the same source data through `/api/source`.
+- Source parser extracts TVL, yield, point issuance, holder tiers, and the wallet directory from the source page.
+- Wallet movement compares against this browser's prior UTC+1 snapshot when available.
+- When no prior snapshot exists, movement is estimated from the source 7-day average daily point issuance.
 
 ## Local Run
 
@@ -23,7 +23,8 @@ Vercel settings are included in `vercel.json`.
 - Framework: `Vite`
 - Build command: `npm run build`
 - Output directory: `dist`
+- API route: `api/source.js`
 
-## Upload To GitHub
+## Notes
 
-Upload every file in this folder except generated folders such as `node_modules`, `dist`, and `.vercel`. Those folders are already excluded in `.gitignore`.
+The source dashboard is embedded from `https://onre.hanyon.app/`. The point analysis page is native to this project and uses the parsed source data.
