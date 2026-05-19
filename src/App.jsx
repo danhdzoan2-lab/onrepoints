@@ -5,6 +5,7 @@ const SOURCE_URL = "https://onre.hanyon.app/";
 const SNAPSHOT_KEY = "onre-source-wallet-snapshot-v3";
 const DAILY_UPDATE_HOUR_UTC = 1;
 const DAILY_UPDATE_OFFSET_MS = DAILY_UPDATE_HOUR_UTC * 60 * 60 * 1000;
+const WALLETS_PER_PAGE = 50;
 
 const POINT_COLUMNS = [
   { key: "wallet", label: "Wallet" },
@@ -32,6 +33,23 @@ function formatPct(value, digits = 2) {
 
 function shortAddress(address) {
   return `${address.slice(0, 6)}...${address.slice(-6)}`;
+}
+
+function getPaginationItems(currentPage, totalPages) {
+  if (totalPages <= 7) {
+    return Array.from({ length: totalPages }, (_, index) => index + 1);
+  }
+
+  const pages = [1];
+  const start = Math.max(2, currentPage - 1);
+  const end = Math.min(totalPages - 1, currentPage + 1);
+
+  if (start > 2) pages.push("start-ellipsis");
+  for (let page = start; page <= end; page += 1) pages.push(page);
+  if (end < totalPages - 1) pages.push("end-ellipsis");
+  pages.push(totalPages);
+
+  return pages;
 }
 
 function getPointUpdateKey(now = new Date()) {
@@ -106,9 +124,7 @@ function useWalletMovement(wallets) {
     if (!wallets.length) return;
 
     const dayKey = getPointUpdateKey();
-    const current = Object.fromEntries(
-      wallets.slice(0, 500).map((wallet) => [wallet.address, wallet.totalPoints])
-    );
+    const current = Object.fromEntries(wallets.map((wallet) => [wallet.address, wallet.totalPoints]));
 
     try {
       const stored = JSON.parse(localStorage.getItem(SNAPSHOT_KEY));
@@ -117,7 +133,9 @@ function useWalletMovement(wallets) {
       if (previous) {
         const nextMovement = {};
         for (const [address, points] of Object.entries(current)) {
-          nextMovement[address] = points - (previous[address] ?? points);
+          if (Object.prototype.hasOwnProperty.call(previous, address)) {
+            nextMovement[address] = points - previous[address];
+          }
         }
         setMovement(nextMovement);
       }
@@ -176,6 +194,7 @@ function Section({ title, description, children }) {
 
 function PointAnalysis({ data, status, movement }) {
   const [now, setNow] = useState(new Date());
+  const [walletPage, setWalletPage] = useState(1);
 
   useEffect(() => {
     const timer = window.setInterval(() => setNow(new Date()), 30_000);
@@ -191,7 +210,7 @@ function PointAnalysis({ data, status, movement }) {
   }, [data.wallets]);
 
   const movementRows = useMemo(() => {
-    return data.wallets.slice(0, 100).map((wallet) => {
+    return data.wallets.map((wallet) => {
       const share = wallet.totalPoints / data.meta.totalPoints;
       const estimate = data.meta.dailyPointsAvg7d * share;
       const actual = movement[wallet.address];
@@ -212,6 +231,20 @@ function PointAnalysis({ data, status, movement }) {
       };
     });
   }, [data, movement]);
+
+  const totalMovementPages = Math.max(1, Math.ceil(movementRows.length / WALLETS_PER_PAGE));
+  const paginationItems = useMemo(
+    () => getPaginationItems(walletPage, totalMovementPages),
+    [walletPage, totalMovementPages]
+  );
+  const pagedMovementRows = useMemo(() => {
+    const start = (walletPage - 1) * WALLETS_PER_PAGE;
+    return movementRows.slice(start, start + WALLETS_PER_PAGE);
+  }, [movementRows, walletPage]);
+
+  useEffect(() => {
+    setWalletPage((currentPage) => Math.min(Math.max(currentPage, 1), totalMovementPages));
+  }, [totalMovementPages]);
 
   return (
     <main className="analysis-page">
@@ -269,9 +302,42 @@ function PointAnalysis({ data, status, movement }) {
 
       <Section
         title="Wallet point movement"
-        description="Movement compares the latest source load to this browser's prior 01:00 GMT snapshot when available; otherwise it allocates the source 7-day daily average by wallet share."
+        description="Movement covers every wallet in the source leaderboard. It compares the latest source load to this browser's prior 01:00 GMT snapshot when available; otherwise it allocates the source 7-day daily average by wallet share."
       >
         <div className="card table-card">
+          <div className="pagination-bar">
+            <span>
+              Page <b>{walletPage}</b> of <b>{totalMovementPages}</b>
+            </span>
+            <div className="pagination-actions">
+              <button type="button" onClick={() => setWalletPage(1)} disabled={walletPage === 1}>
+                First
+              </button>
+              <button type="button" onClick={() => setWalletPage((page) => Math.max(1, page - 1))} disabled={walletPage === 1}>
+                Prev
+              </button>
+              {paginationItems.map((item) => (
+                typeof item === "number" ? (
+                  <button
+                    key={item}
+                    type="button"
+                    className={item === walletPage ? "active" : ""}
+                    onClick={() => setWalletPage(item)}
+                  >
+                    {item}
+                  </button>
+                ) : (
+                  <span key={item}>...</span>
+                )
+              ))}
+              <button type="button" onClick={() => setWalletPage((page) => Math.min(totalMovementPages, page + 1))} disabled={walletPage === totalMovementPages}>
+                Next
+              </button>
+              <button type="button" onClick={() => setWalletPage(totalMovementPages)} disabled={walletPage === totalMovementPages}>
+                Last
+              </button>
+            </div>
+          </div>
           <div className="table-scroll">
             <table className="movement-table">
               <thead>
@@ -286,7 +352,7 @@ function PointAnalysis({ data, status, movement }) {
                 </tr>
               </thead>
               <tbody>
-                {movementRows.map((wallet) => (
+                {pagedMovementRows.map((wallet) => (
                   <tr key={wallet.address}>
                     <td className="numeric muted">{wallet.rank}</td>
                     <td className="mono">
