@@ -31,6 +31,10 @@ function formatPct(value, digits = 2) {
   return `${((value || 0) * 100).toFixed(digits)}%`;
 }
 
+function isFiniteNumber(value) {
+  return typeof value === "number" && Number.isFinite(value);
+}
+
 function shortAddress(address) {
   return `${address.slice(0, 6)}...${address.slice(-6)}`;
 }
@@ -87,6 +91,27 @@ function formatCountdown(target, now = new Date()) {
   return `${hours}h ${String(minutes).padStart(2, "0")}m`;
 }
 
+function normalizeSnapshotPayload(payload, statusLabel = "Stored static snapshot") {
+  if (payload?.data?.meta && payload?.data?.wallets) {
+    return {
+      ...payload.data,
+      snapshot: {
+        store: "static",
+        statusLabel,
+        capturedAt: payload.capturedAt ?? payload.data.fetchedAt,
+        snapshotDate: payload.snapshotDate ?? payload.data.meta.latestPointsDate,
+        previousSnapshotDate: null,
+        expectedSnapshotDate: null,
+        stale: false,
+        movementMatchedWallets: 0,
+        movementTotalWallets: payload.data.wallets.length
+      }
+    };
+  }
+
+  return payload;
+}
+
 function useSourceData() {
   const [data, setData] = useState(fallbackData);
   const [status, setStatus] = useState("Loading source data");
@@ -94,20 +119,38 @@ function useSourceData() {
   useEffect(() => {
     let cancelled = false;
 
-    fetch("/api/source")
-      .then((response) => {
+    async function loadSourceData() {
+      try {
+        const response = await fetch("/api/source");
         if (!response.ok) throw new Error(`API returned ${response.status}`);
-        return response.json();
-      })
-      .then((payload) => {
+        const payload = await response.json();
+        const nextData = normalizeSnapshotPayload(payload);
+
         if (!cancelled) {
-          setData(payload);
-          setStatus("Live source data");
+          setData(nextData);
+          setStatus(nextData.snapshot?.statusLabel ?? "Live source data");
         }
-      })
-      .catch(() => {
+        return;
+      } catch {
+        // Fall through to the committed static snapshot if the API is unavailable.
+      }
+
+      try {
+        const response = await fetch("/snapshots/latest.json", { cache: "no-store" });
+        if (!response.ok) throw new Error(`Static snapshot returned ${response.status}`);
+        const payload = await response.json();
+        const nextData = normalizeSnapshotPayload(payload);
+
+        if (!cancelled) {
+          setData(nextData);
+          setStatus(nextData.snapshot?.statusLabel ?? "Stored static snapshot");
+        }
+      } catch {
         if (!cancelled) setStatus("Snapshot fallback");
-      });
+      }
+    }
+
+    loadSourceData();
 
     return () => {
       cancelled = true;
@@ -213,7 +256,9 @@ function PointAnalysis({ data, status, movement }) {
     return data.wallets.map((wallet) => {
       const share = wallet.totalPoints / data.meta.totalPoints;
       const estimate = data.meta.dailyPointsAvg7d * share;
-      const actual = movement[wallet.address];
+      const serverMove = isFiniteNumber(wallet.dailyMove) ? wallet.dailyMove : undefined;
+      const browserMove = isFiniteNumber(movement[wallet.address]) ? movement[wallet.address] : undefined;
+      const actual = isFiniteNumber(serverMove) ? serverMove : browserMove;
       const primarySource = POINT_COLUMNS.reduce(
         (best, column) => (
           wallet[column.key] > best.value
@@ -225,8 +270,12 @@ function PointAnalysis({ data, status, movement }) {
 
       return {
         ...wallet,
-        move: Number.isFinite(actual) ? actual : estimate,
-        moveType: Number.isFinite(actual) ? "source delta" : "7d avg estimate",
+        move: isFiniteNumber(actual) ? actual : estimate,
+        moveType: isFiniteNumber(serverMove)
+          ? wallet.dailyMoveSource
+          : isFiniteNumber(browserMove)
+            ? "browser snapshot"
+            : "7d avg estimate",
         primarySource
       };
     });
@@ -250,7 +299,8 @@ function PointAnalysis({ data, status, movement }) {
     <main className="analysis-page">
       <div className="source-status">
         <span className="pulse" />
-        {status} - extracted from {data.sourceUrl}
+        {status} - points date {data.meta.latestPointsDate ?? "unknown"} - extracted from {data.sourceUrl}
+        {data.snapshot?.capturedAt ? ` - captured ${new Date(data.snapshot.capturedAt).toUTCString()}` : ""}
       </div>
 
       <section className="metric-grid">
@@ -302,7 +352,7 @@ function PointAnalysis({ data, status, movement }) {
 
       <Section
         title="Wallet point movement"
-        description="Movement covers every wallet in the source leaderboard. It compares the latest source load to this browser's prior 01:00 GMT snapshot when available; otherwise it allocates the source 7-day daily average by wallet share."
+        description="Movement covers every wallet in the source leaderboard. It uses the stored 01:00 GMT daily snapshot when configured, then falls back to this browser's prior snapshot, then a 7-day average estimate."
       >
         <div className="card table-card">
           <div className="pagination-bar">
